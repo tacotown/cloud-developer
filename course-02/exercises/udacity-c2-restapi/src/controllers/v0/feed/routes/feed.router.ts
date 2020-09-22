@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { FeedItem } from '../models/FeedItem';
 import { requireAuth } from '../../users/routes/auth.router';
 import * as AWS from '../../../../aws';
+import { UpdateOptions, DestroyOptions } from "sequelize";
 
 const router: Router = Router();
 
@@ -19,12 +20,54 @@ router.get('/', async (req: Request, res: Response) => {
 //@TODO
 //Add an endpoint to GET a specific resource by Primary Key
 
+router.get('/:id', async(req:Request, res:Response) => {
+    let {id} = req.params;
+    if (!id) {
+        return res.status(400).send('id is required');
+    }
+
+    const item = await FeedItem.findByPk(id);
+
+    if (!item)
+    {
+        return res.status(404).send(`id not found`)
+    }
+    return res.send(item);
+
+});
+
+
 // update a specific resource
 router.patch('/:id', 
     requireAuth, 
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.send(500).send("not implemented")
+        
+        let {id} = req.params;
+
+        if (!id)
+        {
+            return res.status(400).send({ message: 'id is required' });
+        }
+
+        const params = req.body;
+        
+        // check inputs are valid
+        if (!params.caption && !params.url) {
+            return res.status(400).send({ message: 'Either Caption or File url is required' });
+        }
+       
+        const item = await FeedItem.findByPk(id);
+
+        if (!item)
+        {
+            return res.status(404).send({ message: 'record with id not found' });
+        }
+
+        const options:UpdateOptions = {where:{id:id},limit:1,};
+ 
+        item.update(params,options).then(function(rowsUpdated){res.status(202).json(rowsUpdated)}).catch(err => {res.status(500).send({message:'error'})});
+   
+
 });
 
 
